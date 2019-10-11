@@ -48,13 +48,12 @@ vAdd :: Vector -> Vector -> Vector
 -- | Move the falling piece into position
 place :: (Vector,Shape) -> Shape
 place (v,s) = shiftShape v s
-  
+
 --B4
 -- | An invariant that startTetris and stepTetris should uphold
 prop_Tetris :: Tetris -> Bool
 prop_Tetris (Tetris (_,s) w _) = (shapeSize w == wellSize) && (prop_Shape s)
-  
-  
+    
 --B5
 -- | Add black walls around a shape
 addWalls :: Shape -> Shape
@@ -68,8 +67,7 @@ addRight :: Int -> [Row] -> [Row]
 addRight n row = [(replicate n (Just Black)) ++ r | r <- row]
   
 addLeft :: Int -> [Row] -> [Row]
-addLeft n row = [r ++ (replicate n (Just Black)) | r <-row]
-  
+addLeft n row = [r ++ (replicate n (Just Black)) | r <-row]  
   
 --B6
 -- | Visualize the current game state. This is what the user will see
@@ -81,12 +79,12 @@ drawTetris (Tetris (v,p) w _) = addWalls (combine (shiftShape v p) w)
 startTetris :: [Double] -> Tetris
 startTetris rs = Tetris (startPosition,shape1) (emptyShape wellSize) supply
     where
-      shape1:supply = repeat (allShapes!!1) -- incomplete !!!
+      shape1:supply =  [allShapes!!(floor (r * (fromIntegral (length allShapes))))|r <-rs]
   
+
 move :: Vector -> Tetris -> Tetris
 move v1 (Tetris (v2,p) w s) = (Tetris((vAdd v1 v2),p) w s)
   
-
 -- | React to input. The function returns 'Nothing' when it's game over,
 -- and @'Just' (n,t)@, when the game continues in a new state @t@.
 stepTetris :: Action -> Tetris -> Maybe (Int,Tetris)
@@ -98,16 +96,22 @@ stepTetris _ t         = tick t
 
 tick :: Tetris -> Maybe (Int,Tetris)
 tick t 
-    | collision (move (0,1) t) = Just (0,t)
+    | collision (move (0,1) t) = dropNewPiece t
     | otherwise = Just (0 ,(move (0,1) t))
      
-     
 collision :: Tetris -> Bool
-collision (Tetris (v,p) w s) = (((fst(shapeSize p)) + fst(v)) > wellWidth)  || (((snd(shapeSize p)) + snd(v)) > wellHeight) || ((fst(v)) < 0) || (overlaps (place (v,p)) w)
+collision (Tetris (v,p) w s) = shapeRight || shapeDown || shapeLeft || shapeOverlap
+   where 
+    shapeRight   = (fst (shapeSize p) + x) >wellWidth
+    shapeDown    = ((snd (shapeSize p) + y) >wellHeight) 
+    shapeLeft    = (x < 0)
+    shapeOverlap = (overlaps (place (v,p)) w)
+    (x,y) = v
+
 
 movePiece :: Int -> Tetris -> Tetris       
 movePiece n t
-          |  collision (move (n,0) t) = t
+          | collision (move (n,0) t) = t
           | otherwise = move(n,0) t 
 
 rotate :: Tetris -> Tetris
@@ -119,4 +123,12 @@ rotatePiece t
             | otherwise = rotate t
 
 dropNewPiece :: Tetris -> Maybe (Int,Tetris)
-dropNewPiece t =
+dropNewPiece (Tetris (v,p) w (s:rs))
+  | collision t' = Nothing
+  | otherwise = Just (0,t')
+  where
+    t' = (Tetris (startPosition,s) s' rs)
+    s' = combine (place (v,p)) w
+
+--clearLines :: Shape -> (Int,Shape)
+--clearLines s
