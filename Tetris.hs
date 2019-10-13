@@ -125,10 +125,19 @@ rotatePiece t
 dropNewPiece :: Tetris -> Maybe (Int,Tetris)
 dropNewPiece (Tetris (v,p) w (s:rs))
   | collision t' = Nothing
-  | otherwise = Just (0,t')
+  | otherwise = Just (n,t')
   where
     t' = (Tetris (startPosition,s) s' rs)
-    s' = combine (place (v,p)) w
+    (n,s') = clearLines (combine (place (v,p)) w)
 
---clearLines :: Shape -> (Int,Shape)
---clearLines s
+isComplete :: Row -> Bool
+isComplete [] = True
+isComplete (r:rs) = (r/= Nothing) && isComplete rs
+
+--filter, length, null, shapeSize, shiftShape
+
+clearLines :: Shape -> (Int,Shape)
+clearLines (S r) = (n,S w)
+    where n = wellHeight - (length notFull)
+          w = (rows (shiftShape (0,n) (S notFull)))
+          notFull = [ row | row <- r, not (isComplete row)]
